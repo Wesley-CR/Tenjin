@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useStatsVersion } from "@/components/useStats";
 import { getStreak } from "@/lib/stats";
@@ -9,12 +8,9 @@ import { getStreak } from "@/lib/stats";
 /** Shared top bar: brand, day streak, theme toggle. */
 export function Header() {
   const { toggle, theme } = useTheme();
-  const version = useStatsVersion();
-  const streak = useMemo(
-    () => getStreak().count,
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- version is the change signal
-    [version]
-  );
+  // Re-render when the stats store changes so the streak chip stays current.
+  useStatsVersion();
+  const streak = getStreak().count;
 
   return (
     <header className="site-header">

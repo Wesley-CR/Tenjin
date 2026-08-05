@@ -10,7 +10,6 @@ import { updateSettings } from "@/lib/settings";
 /** Greyed-out placeholders that light up as sections are added. */
 const UPCOMING = [
   { label: "Kanji", tagline: "characters, from first grade to JLPT" },
-  { label: "Vocabulary", tagline: "words, readings & meanings" },
 ];
 
 export default function Home() {

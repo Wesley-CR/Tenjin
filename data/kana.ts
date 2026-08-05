@@ -103,7 +103,7 @@ const CHAR: Record<string, string> = {
 /** Reading labels that differ from their key (display purpose only).
  *  Every label must be an accepted reading of that character. */
 const LABEL: Record<string, string> = {
-  sokuon: "っ",
+  sokuon: "tsu",
   dji: "ji",
   dzu: "zu",
   dja: "ja",
@@ -214,7 +214,7 @@ const ROWS: Record<groupId, RowDef> = {
   }),
 
   sokuon: row("sokuon", "っ 促音", "っ", "special", 28, {
-    sokuon: ["っ", "ッ", "xtsu", "ltsu", "xtu", "ltu"],
+    sokuon: ["tsu", "っ", "ッ", "xtsu", "ltsu", "xtu", "ltu"],
   }),
 };
 

@@ -19,8 +19,8 @@ choice" by design). Next.js 16 **App Router, static export**
 (`next.config.ts`: `output: "export"`, `trailingSlash: true`), TypeScript,
 hand-written CSS (no UI framework), Vitest. Deployed to Vercel (auto-detected
 framework; `vercel.json` sets headers for `/sw.js`, `/manifest.webmanifest`,
-security). Content is organized as **sections** (today: `kana`; kanji,
-vocabulary coming).
+security). Content is organized as **sections** (today: `kana`, `vocabulary`;
+kanji coming).
 
 ## Command cheat sheet — run ALL before calling work done
 
@@ -37,6 +37,9 @@ npm start           # serve out/ locally
 ## Architecture & the flow of content
 
 - `data/kana.ts` — content source of truth (full 216-char syllabus, variants).
+- `data/vocabulary.ts` — vocabulary deck (81 words: greetings, numbers, time,
+  family, food, directions, verbs, adjectives, particles, questions). Only
+  supports the **Read** mode (kana → romaji, meaning shown); no picker/draw.
 - `lib/types.ts` — generic contracts: `Card { prompt, answer, check, readings }`,
   `DrillConfig`, `InputKind`, `KanaDirection`.
 - `lib/decks.ts` — **section registry**. Adding kanji/vocab = new `data/<deck>.ts`

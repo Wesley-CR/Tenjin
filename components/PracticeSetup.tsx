@@ -21,6 +21,11 @@ const KANA_MODES: Mode[] = [
   { id: "draw", direction: "toKana", input: "draw", title: "Draw", subtitle: "romaji → write" },
 ];
 
+/** Vocabulary: read the word in kana, type its romaji — meaning shown below. */
+const VOCAB_MODES: Mode[] = [
+  { id: "read", direction: "toRomaji", input: "type", title: "Read", subtitle: "kana → romaji · reading & meaning" },
+];
+
 const COUNTS = [
   { value: 0, label: "All" },
   { value: 10, label: "10" },
@@ -66,13 +71,15 @@ export function PracticeSetup({ deckId }: { deckId: string }) {
 
   const modes: Mode[] = isKana
     ? KANA_MODES
-    : deck.inputs.map((input) => ({
-        id: input,
-        direction: "toKana" as const,
-        input,
-        title: input,
-        subtitle: "",
-      }));
+    : deck.id === "vocabulary"
+      ? VOCAB_MODES
+      : deck.inputs.map((input) => ({
+          id: input,
+          direction: "toKana" as const,
+          input,
+          title: input,
+          subtitle: "",
+        }));
 
   // Derived from the store each render (validated against THIS deck — these
   // are tiny sets; React Compiler handles any memoization worth doing).
@@ -130,9 +137,9 @@ export function PracticeSetup({ deckId }: { deckId: string }) {
     if (!canStart) return;
     const params = new URLSearchParams();
     params.set("deck", deck.id);
+    params.set("dir", mode.direction);
     if (isKana) {
       params.set("scripts", [...scripts].sort().join(","));
-      params.set("dir", mode.direction);
     }
     params.set("groups", [...groups].sort().join(","));
     params.set("input", mode.input);

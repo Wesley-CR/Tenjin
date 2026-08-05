@@ -1,5 +1,6 @@
 import type { Card, DrillGroup, InputKind } from "@/lib/types";
 import { buildKanaCards, KANA_GROUPS, type KanaSettings } from "@/data/kana";
+import { buildVocabCards, VOCAB_GROUPS, type VocabSettings } from "@/data/vocabulary";
 
 /**
  * Registry of practice sections. Kana is the first one; kanji, vocabulary,
@@ -11,9 +12,9 @@ import { buildKanaCards, KANA_GROUPS, type KanaSettings } from "@/data/kana";
  *   3. append a DeckDef here
  * The runner, scheduler, stats and highscores already work for any deck.
  */
-export type DeckId = "kana" | (string & {});
+export type DeckId = "kana" | "vocabulary" | (string & {});
 
-export type DeckSettings = KanaSettings; // | KanjiSettings | VocabularySettings | …
+export type DeckSettings = KanaSettings | VocabSettings;
 
 export interface DeckDef {
   id: DeckId;
@@ -33,6 +34,14 @@ const DECKS: DeckDef[] = [
     groups: KANA_GROUPS,
     inputs: ["type", "picker", "draw"],
     buildCards: buildKanaCards,
+  },
+  {
+    id: "vocabulary",
+    label: "Vocabulary",
+    tagline: "common words & phrases — 80+ entries",
+    groups: VOCAB_GROUPS,
+    inputs: ["type"],
+    buildCards: buildVocabCards,
   },
   // future:
   // { id: "kanji", label: "Kanji", tagline: "JLPT-level characters", groups: KANJI_GROUPS, inputs: ["type", "picker"], buildCards: buildKanjiCards },

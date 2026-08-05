@@ -4,8 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DrillView } from "@/components/drill/DrillView";
-import { getDeckOrFallback, type DeckSettings } from "@/lib/decks";
-import { KANA_GROUPS, type groupId } from "@/data/kana";
+import { getDeckOrFallback, type DeckSettings as DeckSettingsUnion } from "@/lib/decks";
 import { shuffle } from "@/lib/util";
 import type { Card, DrillConfig, InputKind, Script } from "@/lib/types";
 
@@ -19,30 +18,34 @@ function buildConfig(sp: URLSearchParams): DrillConfig {
   return { deck: deck.id, label: deck.label, input, direction: dir, count };
 }
 
-function buildSelection(sp: URLSearchParams) {
-  const scripts = new Set<Script>();
-  for (const v of (sp.get("scripts") ?? "hiragana").split(",")) {
-    if (v === "hiragana" || v === "katakana") scripts.add(v);
-  }
-  const groups = new Set<groupId>();
-  const valid = new Set<string>(KANA_GROUPS.map((g) => g.id));
+function buildSettings(sp: URLSearchParams): DeckSettingsUnion {
+  const deck = getDeckOrFallback(sp.get("deck") ?? "kana");
+  const dir = sp.get("dir") === "toKana" ? "toKana" : "toRomaji";
+  const groups = new Set<string>();
+  const valid = new Set<string>(deck.groups.map((g) => g.id));
   for (const v of (sp.get("groups") ?? "").split(",")) {
-    if (valid.has(v)) groups.add(v as groupId);
+    if (valid.has(v)) groups.add(v);
   }
-  return { scripts, groups };
+  if (deck.id === "kana") {
+    const scripts = new Set<Script>();
+    for (const v of (sp.get("scripts") ?? "hiragana").split(",")) {
+      if (v === "hiragana" || v === "katakana") scripts.add(v);
+    }
+    return { scripts, groups, direction: dir };
+  }
+  return { groups, direction: dir };
 }
 
 export default function PracticeClient() {
   const paramObj = useSearchParams();
   const router = useRouter();
   const config = useMemo(() => buildConfig(paramObj), [paramObj]);
-  const selection = useMemo(() => buildSelection(paramObj), [paramObj]);
+  const settings = useMemo(() => buildSettings(paramObj), [paramObj]);
 
   const initialCards = useMemo(() => {
     const deck = getDeckOrFallback(config.deck);
-    const settings: DeckSettings = { ...selection, direction: config.direction };
     return deck.buildCards(settings);
-  }, [config, selection]);
+  }, [config, settings]);
 
   const [round, setRound] = useState<{ cards: Card[]; id: number }>(() => ({
     cards: initialCards,

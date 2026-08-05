@@ -4,8 +4,9 @@ A minimal, distraction-free Japanese-learning app. Realkana-style pacing, but
 **no multiple choice** (no guessing by elimination).
 
 The home page is a growing list of **sections** — today: **Kana** (hiragana &
-katakana). Kanji, vocabulary and more become new sections later; each one gets
-its own data module and plugs into the same drill engine.
+katakana) and **Vocabulary** (common words & phrases). Kanji becomes new
+sections later; each one gets its own data module and plugs into the same
+drill engine.
 
 Type a reading, pick a character, or draw it with your finger/mouse/stylus.
 Correct answers advance immediately; wrong ones stay on the same card so you
