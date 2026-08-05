@@ -90,4 +90,36 @@ describe("DrillSession", () => {
     });
     expect(s.current()!.id).toBe("a");
   });
+
+  it("equal weights still produce a shuffled (non-id-ordered) run", () => {
+    // With zeroRng, Fisher–Yates on [a, b, c] deterministically yields [b, c, a].
+    const pool = [
+      { ...mk("a"), id: "a", check: (i: string) => i === "a" },
+      { ...mk("b"), id: "b", check: (i: string) => i === "b" },
+      { ...mk("c"), id: "c", check: (i: string) => i === "c" },
+    ];
+    const s = new DrillSession(pool, {
+      questionCount: 0,
+      rng: zeroRng,
+      weights: () => 0,
+    });
+    expect(s.current()!.id).toBe("b");
+    expect(s.current()!.id).not.toBe("a"); // not the alphabetical/data order
+  });
+
+  it("different weights still shuffle within each mastery bucket", () => {
+    // bucket weight 0 = [b, a] (shuffled by zeroRng → [a, b]), weight 1 = [c].
+    const pool = [
+      { ...mk("b"), id: "b", check: (i: string) => i === "b" },
+      { ...mk("a"), id: "a", check: (i: string) => i === "a" },
+      { ...mk("c"), id: "c", check: (i: string) => i === "c" },
+    ];
+    const s = new DrillSession(pool, {
+      questionCount: 0,
+      rng: zeroRng,
+      weights: (id) => (id === "c" ? 1 : 0),
+    });
+    const first = s.current()!.id;
+    expect(first).toBe("a"); // weakest bucket first, but b/a not in data order
+  });
 });

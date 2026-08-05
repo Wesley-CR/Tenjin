@@ -27,6 +27,7 @@ export class DrillSession {
   private queue: Card[];
   private index = 0;
   private readonly weights?: (id: string) => number;
+  private readonly rng: () => number;
 
   readonly questionCount: number;
   correct = 0;
@@ -43,24 +44,30 @@ export class DrillSession {
   constructor(pool: readonly Card[], opts: DrillSessionOptions) {
     this.questionCount = Math.max(0, opts.questionCount);
     this.weights = opts.weights;
+    this.rng = opts.rng ?? Math.random;
     this.queue = this.weighted(pool);
   }
 
   /**
-   * Weakest-first ordering (weight 0 = weakest) so weak cards surface early.
-   * Statically-ordered so the weighting isn't later shuffled away; the engine
-   * already re-orders per run through natural randomisation of the pool.
+   * Weakest-first grouping (weight 0 = weakest) so weak cards surface early —
+   * but the order *within* each mastery level is shuffled, so a fresh run is
+   * properly random instead of falling back to id/data order.
    */
   private weighted(pool: readonly Card[]): Card[] {
     if (!this.weights) {
-      return buildQueue(pool, this.questionCount);
+      return buildQueue(pool, this.questionCount, this.rng);
     }
-    const ordered = [...pool].sort((a, b) => {
-      const wa = this.weights!(a.id) ?? 0;
-      const wb = this.weights!(b.id) ?? 0;
-      if (Math.abs(wa - wb) > 1e-9) return wa - wb;
-      return a.id.localeCompare(b.id);
-    });
+    const buckets = new Map<number, Card[]>();
+    for (const card of pool) {
+      const w = this.weights!(card.id) ?? 0;
+      const bucket = buckets.get(w) ?? [];
+      bucket.push(card);
+      buckets.set(w, bucket);
+    }
+    const ordered: Card[] = [];
+    for (const w of [...buckets.keys()].sort((a, b) => a - b)) {
+      ordered.push(...shuffle(buckets.get(w)!, this.rng));
+    }
     return cycle(ordered, this.questionCount);
   }
 
@@ -118,7 +125,7 @@ export class DrillSession {
   /** Rebuild the queue order (normally overkill; exists for tests/replays). */
   reshuffle() {
     const rest = this.queue.slice(this.index);
-    this.queue = shuffle(rest);
+    this.queue = shuffle(rest, this.rng);
     this.index = 0;
   }
 
