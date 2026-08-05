@@ -4,17 +4,19 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DrillView } from "@/components/drill/DrillView";
-import { KANA_GROUPS, buildKanaCards, type groupId } from "@/data/kana";
+import { getDeckOrFallback, type DeckSettings } from "@/lib/decks";
+import { KANA_GROUPS, type groupId } from "@/data/kana";
 import { shuffle } from "@/lib/util";
 import type { Card, DrillConfig, InputKind, Script } from "@/lib/types";
 
 function buildConfig(sp: URLSearchParams): DrillConfig {
+  const deckId = sp.get("deck") ?? "kana";
+  const deck = getDeckOrFallback(deckId);
   const dir = sp.get("dir") === "toKana" ? "toKana" : "toRomaji";
   let input = (sp.get("input") ?? "type") as InputKind;
-  if (input !== "picker" && input !== "draw") input = "type";
-  if (dir === "toRomaji" && input !== "type") input = "type";
+  if (!deck.inputs.includes(input)) input = "type";
   const count = Math.max(0, Number(sp.get("count")) || 0);
-  return { deck: "hiragana", label: "Kana", input, direction: dir, count };
+  return { deck: deck.id, label: deck.label, input, direction: dir, count };
 }
 
 function buildSelection(sp: URLSearchParams) {
@@ -36,10 +38,11 @@ export default function PracticeClient() {
   const config = useMemo(() => buildConfig(paramObj), [paramObj]);
   const selection = useMemo(() => buildSelection(paramObj), [paramObj]);
 
-  const initialCards = useMemo(
-    () => buildKanaCards({ ...selection, direction: config.direction }),
-    [selection, config.direction]
-  );
+  const initialCards = useMemo(() => {
+    const deck = getDeckOrFallback(config.deck);
+    const settings: DeckSettings = { ...selection, direction: config.direction };
+    return deck.buildCards(settings);
+  }, [config, selection]);
 
   const [round, setRound] = useState<{ cards: Card[]; id: number }>(() => ({
     cards: initialCards,
@@ -49,7 +52,7 @@ export default function PracticeClient() {
   if (initialCards.length === 0) {
     return (
       <section className="empty-state">
-        <p>That selection has no characters. Pick at least one script and one group.</p>
+        <p>That selection has no characters. Pick at least one group to practice.</p>
         <Link className="btn-primary" href="/">Back to setup</Link>
       </section>
     );

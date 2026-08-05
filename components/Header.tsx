@@ -18,9 +18,9 @@ export function Header() {
 
   return (
     <header className="site-header">
-      <Link href="/" className="brand">
-        <span className="brand-mark" aria-hidden>あ</span>
-        <span className="brand-name">Kana Trainer</span>
+      <Link href="/" className="brand" title="Tenjin てんじん">
+        <span className="brand-mark" aria-hidden>天</span>
+        <span className="brand-name">Tenjin</span>
       </Link>
 
       <nav className="header-actions">

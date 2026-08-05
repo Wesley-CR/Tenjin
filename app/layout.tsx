@@ -5,10 +5,10 @@ import { Header } from "@/components/Header";
 import { PwaRegister } from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
-  title: "Kana Trainer — learn hiragana & katakana",
+  title: "Tenjin てんじん — learn Japanese, one drill at a time",
   description:
-    "A minimal, distraction-free drill for Japanese kana. Read, type, pick or draw your way to mastery. Works offline.",
-  applicationName: "Kana Trainer",
+    "Minimal, distraction-free Japanese drills. Start with hiragana & katakana; kanji and vocabulary sections are on the way. Works offline.",
+  applicationName: "Tenjin",
   manifest: "/manifest.webmanifest",
   icons: [
     { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },

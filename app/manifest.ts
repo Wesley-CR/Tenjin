@@ -5,10 +5,10 @@ export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Kana Trainer — learn Japanese kana",
-    short_name: "Kana Trainer",
+    name: "Tenjin てんじん — learn Japanese",
+    short_name: "Tenjin",
     description:
-      "Minimal drills for hiragana and katakana: read, type, pick or draw. Works offline.",
+      "Minimal, distraction-free Japanese drills: kana today, kanji and vocabulary soon. Works offline.",
     start_url: "/",
     scope: "/",
     display: "standalone",

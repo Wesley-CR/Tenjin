@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { KANA_GROUPS } from "@/data/kana";
+import { getDeckOrFallback } from "@/lib/decks";
 import type { InputKind, KanaDirection, Script } from "@/lib/types";
 
 interface Mode {
@@ -13,7 +13,8 @@ interface Mode {
   subtitle: string;
 }
 
-const MODES: Mode[] = [
+/** The three kana-specific ways to answer. */
+const KANA_MODES: Mode[] = [
   { id: "read", direction: "toRomaji", input: "type", title: "Read", subtitle: "kana → romaji" },
   { id: "write", direction: "toKana", input: "picker", title: "Write", subtitle: "romaji → kana" },
   { id: "draw", direction: "toKana", input: "draw", title: "Draw", subtitle: "romaji → write" },
@@ -26,31 +27,50 @@ const COUNTS = [
   { value: 50, label: "50" },
 ];
 
-const defaultGroups = () => {
+/** Default to the first group section (for kana that's the basic rows). */
+function defaultGroups(deckId: string): Set<string> {
+  const def = getDeckOrFallback(deckId);
+  const firstHeader = def.groups[0]?.header;
   const s = new Set<string>();
-  for (const g of KANA_GROUPS) if (g.header === "Basic") s.add(g.id);
+  for (const g of def.groups) {
+    if (g.header === firstHeader) s.add(g.id);
+  }
   return s;
-};
+}
 
-export function PracticeSetup() {
+export function PracticeSetup({ deckId }: { deckId: string }) {
   const router = useRouter();
+  const deck = getDeckOrFallback(deckId);
+
   const [scripts, setScripts] = useState<Set<Script>>(new Set(["hiragana", "katakana"]));
-  const [groups, setGroups] = useState<Set<string>>(defaultGroups);
-  const [modeId, setModeId] = useState<string>(MODES[0].id);
+  const [groups, setGroups] = useState<Set<string>>(() => defaultGroups(deckId));
+  const [modeId, setModeId] = useState<string>(KANA_MODES[0].id);
   const [count, setCount] = useState<number>(0);
 
   const sections = useMemo(() => {
-    const map = new Map<string, typeof KANA_GROUPS>();
-    for (const g of KANA_GROUPS) {
+    const map = new Map<string, typeof deck.groups>();
+    for (const g of deck.groups) {
       const list = map.get(g.header) ?? [];
       list.push(g);
       map.set(g.header, list);
     }
     return [...map.entries()];
-  }, []);
+  }, [deck]);
 
-  const mode = MODES.find((m) => m.id === modeId) ?? MODES[0];
-  const canStart = scripts.size > 0 && groups.size > 0;
+  const isKana = deck.id === "kana";
+  // Non-kana sections use their declared inputs as simple modes for now.
+  const modes: Mode[] = isKana
+    ? KANA_MODES
+    : deck.inputs.map((input) => ({
+        id: input,
+        direction: "toKana" as const,
+        input,
+        title: input,
+        subtitle: "",
+      }));
+
+  const mode = modes.find((m) => m.id === modeId) ?? modes[0];
+  const canStart = groups.size > 0 && (!isKana || scripts.size > 0);
 
   function toggleScript(s: Script) {
     setScripts((prev) => {
@@ -86,10 +106,12 @@ export function PracticeSetup() {
   function start() {
     if (!canStart) return;
     const params = new URLSearchParams();
-    params.set("deck", "hiragana");
-    params.set("scripts", [...scripts].sort().join(","));
+    params.set("deck", deck.id);
+    if (isKana) {
+      params.set("scripts", [...scripts].sort().join(","));
+      params.set("dir", mode.direction);
+    }
     params.set("groups", [...groups].sort().join(","));
-    params.set("dir", mode.direction);
     params.set("input", mode.input);
     params.set("count", String(count));
     router.push(`/practice/?${params.toString()}`);
@@ -97,22 +119,24 @@ export function PracticeSetup() {
 
   return (
     <div className="setup">
-      <div className="field">
-        <label className="field-label">Script</label>
-        <div className="segmented" role="group" aria-label="Script">
-          {(["hiragana", "katakana"] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={`segmented-item ${scripts.has(s) ? "is-active" : ""}`}
-              onClick={() => toggleScript(s)}
-              aria-pressed={scripts.has(s)}
-            >
-              {s === "hiragana" ? "Hiragana" : "Katakana"}
-            </button>
-          ))}
+      {isKana && (
+        <div className="field">
+          <label className="field-label">Script</label>
+          <div className="segmented" role="group" aria-label="Script">
+            {(["hiragana", "katakana"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`segmented-item ${scripts.has(s) ? "is-active" : ""}`}
+                onClick={() => toggleScript(s)}
+                aria-pressed={scripts.has(s)}
+              >
+                {s === "hiragana" ? "Hiragana" : "Katakana"}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="field">
         <label className="field-label">Groups</label>
@@ -154,7 +178,7 @@ export function PracticeSetup() {
       <div className="field">
         <label className="field-label">Mode</label>
         <div className="mode-grid" role="group" aria-label="Practice mode">
-          {MODES.map((m) => (
+          {modes.map((m) => (
             <button
               key={m.id}
               type="button"
@@ -163,7 +187,7 @@ export function PracticeSetup() {
               aria-pressed={modeId === m.id}
             >
               <span className="mode-title">{m.title}</span>
-              <span className="mode-subtitle">{m.subtitle}</span>
+              {m.subtitle && <span className="mode-subtitle">{m.subtitle}</span>}
             </button>
           ))}
         </div>

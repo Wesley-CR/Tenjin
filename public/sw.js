@@ -1,11 +1,11 @@
 /**
- * Kana Trainer service worker.
+ * Tenjin service worker.
  * Strategy:
  *  - Navigations: network-first, fall back to cached index (offline shell).
  *  - Assets: stale-while-revalidate (serve cache instantly, refresh silently).
  * Everything is scoped to our own origin; third-party requests pass through.
  */
-const CACHE = "kana-trainer-v1";
+const CACHE = "tenjin-v1";
 const SHELL = ["/", "/index.html"];
 
 self.addEventListener("install", (event) => {

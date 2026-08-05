@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------
-   Kana Trainer — design system
+   Tenjin — design system
    Modern minimal: warm neutrals, one vermilion accent, airy spacing.
    Light + dark via `html[data-theme]`.
 ------------------------------------------------------------------- */
@@ -218,6 +218,66 @@ a {
   max-width: 56ch;
   color: var(--text-mute);
   font-size: 15px;
+}
+
+/* ------------------------------ sections ----------------------------- */
+
+.sections {
+  margin-bottom: 24px;
+}
+
+.section-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.section-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  background: var(--bg-elev);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s, transform 0.1s, background 0.15s;
+}
+
+button.section-card:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.section-card.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.section-card-label {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.section-card-tagline {
+  font-size: 12.5px;
+  color: var(--text-mute);
+}
+
+.section-card--soon {
+  cursor: default;
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.section-card-soon {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 /* ------------------------------- setup ------------------------------- */
