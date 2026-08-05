@@ -1,30 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useMemo } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import { useStatsVersion } from "@/components/useStats";
 import { getStreak } from "@/lib/stats";
-
-/** Reactive day-streak from the local stats store. */
-function useStreak(): number {
-  return useSyncExternalStore(
-    (onChange) => {
-      window.addEventListener("kana-trainer:stats", onChange);
-      window.addEventListener("storage", onChange);
-      return () => {
-        window.removeEventListener("kana-trainer:stats", onChange);
-        window.removeEventListener("storage", onChange);
-      };
-    },
-    () => getStreak().count,
-    () => 0
-  );
-}
 
 /** Shared top bar: brand, day streak, theme toggle. */
 export function Header() {
   const { toggle, theme } = useTheme();
-  const streak = useStreak();
+  const version = useStatsVersion();
+  const streak = useMemo(
+    () => getStreak().count,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- version is the change signal
+    [version]
+  );
 
   return (
     <header className="site-header">

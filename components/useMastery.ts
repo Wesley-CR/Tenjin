@@ -1,29 +1,25 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useMemo } from "react";
 import { allCardStats, masteryLevel, type Mastery } from "@/lib/stats";
+import { useStatsVersion } from "@/components/useStats";
 
 /**
- * Reactive, SSR-safe view of the local progress store. Subscribes to a custom
- * event that the stats layer dispatches on every write, plus `storage` so any
- * other tab that practices refreshes the charts too.
+ * Reactive, hydration-safe view of per-card mastery. The snapshot is a *new*
+ * function only when the stats version changes — crucially, an outer Map is
+ * rebuilt via `useMemo`, so `useSyncExternalStore` never sees a fresh object
+ * reference on every render.
  */
 export function useMastery(): (id: string) => Mastery {
-  const cards = useSyncExternalStore(
-    (onChange) => {
-      window.addEventListener("kana-trainer:stats", onChange);
-      window.addEventListener("storage", onChange);
-      return () => {
-        window.removeEventListener("kana-trainer:stats", onChange);
-        window.removeEventListener("storage", onChange);
-      };
-    },
+  const version = useStatsVersion();
+  const cards = useMemo(
     () => {
       const m = new Map<string, Mastery>();
       for (const [id, stat] of allCardStats()) m.set(id, masteryLevel(stat));
       return m;
     },
-    () => new Map<string, Mastery>()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- version is the change signal
+    [version]
   );
-  return (id: string) => cards.get(id) ?? "new";
+  return useMemo(() => (id: string) => cards.get(id) ?? "new", [cards]);
 }

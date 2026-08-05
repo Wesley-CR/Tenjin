@@ -42,8 +42,12 @@ const DEFAULT_DB: DB = { cards: {}, scores: {}, streak: { count: 0, lastDay: "" 
 let cache: DB | null = null;
 
 function store(): Storage | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage;
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage;
+  } catch {
+    return null; // storage disabled (e.g. private browsing)
+  }
 }
 
 export function loadDB(): DB {
@@ -59,13 +63,33 @@ export function loadDB(): DB {
   return cache;
 }
 
+/* ------------------------ reactive subscription ---------------------- */
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+let version = 0;
+
+/** Subscribe to stat changes (any write invalidates local UI). */
+export function subscribeStats(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Monotonic version bumped on every save — use as a useSyncExternalStore snapshot. */
+export function statsVersion(): number {
+  return version;
+}
+
+function notifyStats(): void {
+  version++;
+  for (const l of [...listeners]) l();
+}
+
 export function saveDB(): void {
   const s = store();
   if (!s || !cache) return;
   s.setItem(DB_KEY, JSON.stringify(cache));
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("kana-trainer:stats"));
-  }
+  notifyStats();
 }
 
 export function resetAll(): void {
@@ -179,7 +203,6 @@ function updateStreak(db: DB): void {
 
 /** The current streak, counting today's run to its duration. */
 export function peekStreakToday(): number {
-  const db = loadDB();
-  const today = localDay(new Date());
-  return db.streak.lastDay === today ? db.streak.count : db.streak.count;
+  const { count, lastDay } = loadDB().streak;
+  return lastDay === localDay(new Date()) ? count : count;
 }
