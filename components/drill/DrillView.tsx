@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import type { Card, DrillConfig } from "@/lib/types";
 import { DrillSession } from "@/lib/quizzing";
+import { classifyInput } from "@/lib/matching";
 import { masteryWeights, recordAttempt, recordSession, bestScore, resetAll } from "@/lib/stats";
 import { DrawCanvas } from "@/components/drill/DrawCanvas";
 
@@ -37,6 +38,9 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
   const finalizedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Marks that the current card was already scored as a miss, so repeated bad
+   *  keystrokes (or repeated failed draws) don't inflate the count. */
+  const scoredRef = useRef(false);
 
   const current = session.current();
   const key = modeKey(config);
@@ -81,38 +85,86 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
     setFinished(true);
   }
 
-  function submit(raw: string) {
+  /** The card was answered correctly → score it and move on instantly. */
+  function scoreCorrect(card: Card) {
+    session.attempt(card.answer);
+    recordAttempt(card.id, true);
+    scoredRef.current = false;
+    setInput("");
+    setReveal(null);
+    flash("ok");
+    bump();
+    finalizeIfDone();
+  }
+
+  /** An un-rescuable wrong input (or failed draw) → one miss on this card. */
+  function scoreMiss(card: Card, raw: string) {
+    session.attempt(raw); // check(raw) is false here → counts a miss, stays put
+    recordAttempt(card.id, false);
+    scoredRef.current = true;
+    flash("no");
+    bump();
+  }
+
+  function scoreDrawMiss(card: Card) {
+    if (scoredRef.current) return;
+    session.fail();
+    recordAttempt(card.id, false);
+    scoredRef.current = true;
+  }
+
+  /** React to typing: correct → advance, prefix → wait, useless → miss. */
+  function onTypeChange(raw: string) {
+    setInput(raw);
     const card = session.current();
-    if (!card) return;
-    const res = session.attempt(raw);
-    recordAttempt(card.id, res.correct);
-    if (res.correct) {
-      setInput("");
-      setReveal(null);
-      flash("ok");
-      bump();
-      finalizeIfDone();
+    if (!card || session.finished) return;
+    const status = classifyInput(card, raw);
+
+    if (status === "correct") {
+      scoreCorrect(card);
+    } else if (status === "wrong") {
+      scoreMiss(card, raw);
+    } else if (status === "partial") {
+      scoredRef.current = false; // new path is open again — resets the miss mark
     } else {
-      setReveal(null);
-      flash("no");
-      bump();
+      scoredRef.current = false;
     }
   }
 
-  /** First press reveals the answer; a second press reveals & moves on. */
-  function skip() {
+  /** Show answer first; press again (or Enter / Space) to advance. */
+  function revealOrAdvance() {
     const card = session.current();
     if (!card || session.finished) return;
-    if (reveal) {
-      session.skip();
-      recordAttempt(card.id, false);
-      setReveal(null);
-      flash("no");
-      bump();
-      finalizeIfDone();
-    } else {
+    if (!reveal) {
       setReveal(card.answer);
-      flash("no");
+      setFeedback("none");
+      return;
+    }
+    session.skip();
+    recordAttempt(card.id, false);
+    scoredRef.current = false;
+    setReveal(null);
+    setInput("");
+    flash("no");
+    bump();
+    finalizeIfDone();
+  }
+
+  /** The pad: tap the exact answer character. */
+  function pickTap(picked: string) {
+    const card = session.current();
+    if (!card || session.finished) return;
+    if (card.check(picked)) scoreCorrect(card);
+    else scoreMiss(card, picked);
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      revealOrAdvance();
+    } else if (e.key === " ") {
+      e.preventDefault();
+      if (!input) revealOrAdvance();
     }
   }
 
@@ -122,11 +174,10 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
     const correct = session.correct;
     const total = session.correct + session.misses;
     const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const missed = session.missedCards();
 
     const resetProgress = () => {
-      if (confirm("Delete all local progress?")) {
-        resetAll();
-      }
+      if (confirm("Delete all local progress?")) resetAll();
     };
 
     return (
@@ -148,11 +199,24 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
           </p>
         )}
 
+        {missed.length > 0 && (
+          <div className="result-misses">
+            <span className="result-misses-label">Needs practice:</span>
+            <span className="result-misses-keys">
+              {missed.map((m) => (
+                <span key={m.id} className="miss-key" data-answer={m.answer}>
+                  {m.prompt} <small>{m.answer}</small>
+                </span>
+              ))}
+            </span>
+          </div>
+        )}
+
         <div className="result-actions">
           <button className="btn-primary" onClick={onReplay}>Shuffle again</button>
-          {session.missedCards().length > 0 && (
-            <button className="btn-secondary" onClick={() => onReview(session.missedCards())}>
-              Review missed ({session.missedCards().length})
+          {missed.length > 0 && (
+            <button className="btn-secondary" onClick={() => onReview(missed)}>
+              Review missed ({missed.length})
             </button>
           )}
           <button className="btn-ghost" onClick={onExit}>Change settings</button>
@@ -177,7 +241,7 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
           <span>
             {session.position + 1} / {session.total}
           </span>
-          <span className={`${feedback === "ok" ? "drill-feedback-ok" : ""}${feedback === "no" ? "drill-feedback-no" : ""}`}>
+          <span className={feedback === "no" ? "drill-feedback-no" : ""}>
             {feedback === "no" ? "Try again" : ""}
           </span>
         </div>
@@ -192,8 +256,8 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
           </div>
 
           {reveal && (
-            <p className="reveal">
-              Answer: <strong>{reveal}</strong> — moving on
+            <p className="reveal" role="status">
+              Answer: <strong>{reveal}</strong> — press Enter, Space or Next to continue
             </p>
           )}
 
@@ -204,23 +268,19 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
                 ref={inputRef}
                 className={`type-input ${feedback === "no" ? "type-input--wrong" : ""}`}
                 value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  submit(e.target.value);
-                }}
+                onChange={(e) => onTypeChange(e.target.value)}
+                onKeyDown={onKeyDown}
                 placeholder={config.direction === "toRomaji" ? "type reading…" : "type the kana…"}
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
                 autoComplete="off"
-                enterKeyHint="go"
+                enterKeyHint="done"
               />
               <div className="type-hint">
-                {config.direction === "toRomaji" ? (
-                  <>Type a reading. Both Hepburn (shi) and Kunrei (si) work.</>
-                ) : (
-                  <>Type the character (or its reading) to select it.</>
-                )}
+                {config.direction === "toRomaji"
+                  ? <>Type a reading; both Hepburn (shi) and Kunrei (si) work.</>
+                  : <>Type the character (or its reading) to select it.</>}
               </div>
             </div>
           )}
@@ -231,8 +291,14 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
               key={current.id}
               target={current.answer}
               fontFamily={KANA_FONT}
-              onPass={() => submit(current.answer)}
-              onFail={() => recordAttempt(current.id, false)}
+              onPass={() => {
+                const card = session.current();
+                if (card) scoreCorrect(card);
+              }}
+              onFail={() => {
+                const card = session.current();
+                if (card) scoreDrawMiss(card);
+              }}
             />
           )}
 
@@ -241,12 +307,7 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
             <div className={feedback === "no" ? "pad--wrong" : ""}>
               <div className="pad">
                 {padOptions.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className="pad-key"
-                    onClick={() => submit(c.answer)}
-                  >
+                  <button key={c.id} type="button" className="pad-key" onClick={() => pickTap(c.answer)}>
                     {c.answer}
                   </button>
                 ))}
@@ -256,7 +317,9 @@ export function DrillView({ config, cards, onReplay, onReview, onExit }: Props) 
           )}
 
           <div className="drill-actions">
-            <button className="btn-ghost" onClick={skip}>Skip · show answer</button>
+            <button className="btn-ghost" onClick={revealOrAdvance}>
+              {reveal ? "Next →" : "Show answer"}
+            </button>
           </div>
         </>
       )}

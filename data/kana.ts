@@ -1,4 +1,5 @@
 import type { Card, DrillGroup, KanaDirection, Script } from "@/lib/types";
+import { normalizeInput } from "@/lib/matching";
 
 export type KanaKind =
   | "basic"
@@ -286,10 +287,6 @@ export const KANA_GROUPS: DrillGroup[] = GROUP_LIST.map((r) => ({
   header: KIND_HEADERS[r.kind],
 }));
 
-function normalizeInput(input: string): string {
-  return input.toLowerCase().replace(/[\s]/g, "").trim();
-}
-
 /**
  * Builds direction-ready cards for the selected scripts and rows.
  * This is the one function a future deck module must provide.
@@ -308,11 +305,13 @@ export function buildKanaCards(settings: KanaSettings): Card[] {
         sub: entry.script,
         deck: "hiragana",
         group: entry.row,
+        readings: entry.variants.map(normalizeInput),
         check: (input) => entry.variants.includes(normalizeInput(input)),
       });
     } else {
       // Prompt = reading, answer = kana. Both the character itself and any
       // valid reading count, so typing and picking are equally forgiving.
+      const readings = [entry.char, ...entry.variants.map(normalizeInput)];
       out.push({
         id: entry.id,
         prompt: entry.romaji,
@@ -320,6 +319,7 @@ export function buildKanaCards(settings: KanaSettings): Card[] {
         sub: entry.script,
         deck: "hiragana",
         group: entry.row,
+        readings,
         check: (input) => {
           const norm = normalizeInput(input);
           return norm === entry.char || entry.variants.includes(norm);

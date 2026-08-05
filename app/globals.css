@@ -786,6 +786,44 @@ a {
   margin: 0;
 }
 
+.result-misses {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.result-misses-label {
+  font-size: 13px;
+  color: var(--text-mute);
+}
+
+.result-misses-keys {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.miss-key {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-family: var(--font-kana);
+  font-size: 18px;
+  background: var(--bg-elev);
+}
+
+.miss-key small {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
 .result-actions {
   display: flex;
   flex-wrap: wrap;

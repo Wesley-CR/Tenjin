@@ -39,6 +39,11 @@ export interface Card {
   notes?: string;
   /** Accepts raw user input; must be pure & side-effect free. */
   check: (input: string) => boolean;
+  /**
+   * The accepted typed forms (already normalised). Enables prefix-aware
+   * matching so typing "k…" toward "ka" isn't marked wrong mid-word.
+   */
+  readings?: string[];
   /** Which deck this card came from (drives stats scope). */
   deck?: DeckId;
   /** Which subgroup (row / JLPT level / topic). */

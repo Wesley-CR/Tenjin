@@ -106,6 +106,15 @@ export class DrillSession {
     return { correct: false, advanced: true, next: this.current() };
   }
 
+  /** Scores a miss on the current card without advancing (used by write/draw
+   *  modes, where the user retries the same card in place). */
+  fail(): void {
+    const card = this.current();
+    if (!card) return;
+    this.misses++;
+    this.missed.set(card.id, card);
+  }
+
   /** Rebuild the queue order (normally overkill; exists for tests/replays). */
   reshuffle() {
     const rest = this.queue.slice(this.index);
