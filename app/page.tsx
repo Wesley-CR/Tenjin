@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { KanaTable } from "@/components/KanaTable";
 import { PracticeSetup } from "@/components/PracticeSetup";
 import { useMastery } from "@/components/useMastery";
+import { useSettings } from "@/components/useSettings";
 import { SECTIONS } from "@/lib/decks";
+import { updateSettings } from "@/lib/settings";
 
 /** Greyed-out placeholders that light up as sections are added. */
 const UPCOMING = [
@@ -13,8 +14,14 @@ const UPCOMING = [
 ];
 
 export default function Home() {
-  const [deckId, setDeckId] = useState<string>(SECTIONS[0]?.id ?? "kana");
+  const settings = useSettings();
   const mastery = useMastery();
+
+  // Remembered section, validated against what exists today.
+  const deckId =
+    settings && SECTIONS.some((s) => s.id === settings.deck)
+      ? settings.deck
+      : SECTIONS[0].id;
 
   return (
     <div className="home">
@@ -35,7 +42,7 @@ export default function Home() {
               key={s.id}
               type="button"
               className={`section-card ${s.id === deckId ? "is-active" : ""}`}
-              onClick={() => setDeckId(s.id)}
+              onClick={() => updateSettings({ deck: s.id })}
               aria-pressed={s.id === deckId}
             >
               <span className="section-card-label">{s.label}</span>

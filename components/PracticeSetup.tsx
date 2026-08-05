@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getDeckOrFallback } from "@/lib/decks";
+import { useSettings } from "@/components/useSettings";
+import { updateSettings } from "@/lib/settings";
 import type { InputKind, KanaDirection, Script } from "@/lib/types";
 
 interface Mode {
@@ -26,6 +27,9 @@ const COUNTS = [
   { value: 25, label: "25" },
   { value: 50, label: "50" },
 ];
+const VALID_COUNTS = new Set(COUNTS.map((c) => c.value));
+
+const ALL_SCRIPTS: Script[] = ["hiragana", "katakana"];
 
 /** Default to the first group section (for kana that's the basic rows). */
 function defaultGroups(deckId: string): Set<string> {
@@ -38,16 +42,19 @@ function defaultGroups(deckId: string): Set<string> {
   return s;
 }
 
+/**
+ * Practice configuration. Controlled directly by the persisted settings store
+ * (single source of truth), so every change survives a reload with no extra
+ * state or effects.
+ */
 export function PracticeSetup({ deckId }: { deckId: string }) {
   const router = useRouter();
   const deck = getDeckOrFallback(deckId);
+  const settings = useSettings();
+  const savedHere = settings?.deck === deck.id ? settings : null;
+  const isKana = deck.id === "kana";
 
-  const [scripts, setScripts] = useState<Set<Script>>(new Set(["hiragana", "katakana"]));
-  const [groups, setGroups] = useState<Set<string>>(() => defaultGroups(deckId));
-  const [modeId, setModeId] = useState<string>(KANA_MODES[0].id);
-  const [count, setCount] = useState<number>(0);
-
-  const sections = useMemo(() => {
+  const sections: Array<[string, typeof deck.groups]> = (() => {
     const map = new Map<string, typeof deck.groups>();
     for (const g of deck.groups) {
       const list = map.get(g.header) ?? [];
@@ -55,10 +62,8 @@ export function PracticeSetup({ deckId }: { deckId: string }) {
       map.set(g.header, list);
     }
     return [...map.entries()];
-  }, [deck]);
+  })();
 
-  const isKana = deck.id === "kana";
-  // Non-kana sections use their declared inputs as simple modes for now.
   const modes: Mode[] = isKana
     ? KANA_MODES
     : deck.inputs.map((input) => ({
@@ -69,38 +74,56 @@ export function PracticeSetup({ deckId }: { deckId: string }) {
         subtitle: "",
       }));
 
+  // Derived from the store each render (validated against THIS deck — these
+  // are tiny sets; React Compiler handles any memoization worth doing).
+  const scripts: Set<Script> = (() => {
+    const base = isKana && savedHere && savedHere.scripts.length > 0
+      ? savedHere.scripts
+      : ALL_SCRIPTS;
+    const set = new Set<Script>();
+    for (const s of base) if (s === "hiragana" || s === "katakana") set.add(s);
+    return set;
+  })();
+
+  const validGroupIds = new Set(deck.groups.map((g) => g.id));
+  const storedGroups = savedHere
+    ? savedHere.groups.filter((g) => validGroupIds.has(g))
+    : null;
+  const groups = storedGroups && storedGroups.length > 0
+    ? new Set(storedGroups)
+    : defaultGroups(deckId);
+
+  const modeId = savedHere && modes.some((m) => m.id === savedHere.modeId)
+    ? savedHere.modeId
+    : modes[0].id;
+  const count = savedHere && VALID_COUNTS.has(savedHere.count) ? savedHere.count : 0;
   const mode = modes.find((m) => m.id === modeId) ?? modes[0];
+
   const canStart = groups.size > 0 && (!isKana || scripts.size > 0);
 
   function toggleScript(s: Script) {
-    setScripts((prev) => {
-      const next = new Set(prev);
-      if (next.has(s)) next.delete(s);
-      else next.add(s);
-      return next;
-    });
+    const next = new Set(scripts);
+    if (next.has(s)) next.delete(s);
+    else next.add(s);
+    updateSettings({ deck: deck.id, scripts: [...next] });
   }
 
   function toggleGroup(id: string) {
-    setGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(groups);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    updateSettings({ deck: deck.id, groups: [...next] });
   }
 
   function toggleSection(header: string) {
     const ids = sections.find(([h]) => h === header)?.[1].map((g) => g.id) ?? [];
     const allOn = ids.every((id) => groups.has(id));
-    setGroups((prev) => {
-      const next = new Set(prev);
-      for (const id of ids) {
-        if (allOn) next.delete(id);
-        else next.add(id);
-      }
-      return next;
-    });
+    const next = new Set(groups);
+    for (const id of ids) {
+      if (allOn) next.delete(id);
+      else next.add(id);
+    }
+    updateSettings({ deck: deck.id, groups: [...next] });
   }
 
   function start() {
@@ -123,7 +146,7 @@ export function PracticeSetup({ deckId }: { deckId: string }) {
         <div className="field">
           <label className="field-label">Script</label>
           <div className="segmented" role="group" aria-label="Script">
-            {(["hiragana", "katakana"] as const).map((s) => (
+            {ALL_SCRIPTS.map((s) => (
               <button
                 key={s}
                 type="button"
@@ -183,7 +206,7 @@ export function PracticeSetup({ deckId }: { deckId: string }) {
               key={m.id}
               type="button"
               className={`mode-card ${modeId === m.id ? "is-active" : ""}`}
-              onClick={() => setModeId(m.id)}
+              onClick={() => updateSettings({ deck: deck.id, modeId: m.id })}
               aria-pressed={modeId === m.id}
             >
               <span className="mode-title">{m.title}</span>
@@ -201,7 +224,7 @@ export function PracticeSetup({ deckId }: { deckId: string }) {
               key={c.value}
               type="button"
               className={`segmented-item ${count === c.value ? "is-active" : ""}`}
-              onClick={() => setCount(c.value)}
+              onClick={() => updateSettings({ deck: deck.id, count: c.value })}
               aria-pressed={count === c.value}
             >
               {c.label}
