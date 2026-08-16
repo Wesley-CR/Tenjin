@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { Header } from "@/components/Header";
+import { NavBar } from "@/components/NavBar";
 import { PwaRegister } from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
@@ -40,8 +40,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ThemeProvider>
-          <div className="shell">
-            <Header />
+          <div className="app-shell">
+            <NavBar />
             <main className="main">{children}</main>
             <footer className="footer">
               <span>Only your device knows your progress.</span>

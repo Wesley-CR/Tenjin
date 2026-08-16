@@ -5,7 +5,7 @@
  *  - Assets: stale-while-revalidate (serve cache instantly, refresh silently).
  * Everything is scoped to our own origin; third-party requests pass through.
  */
-const CACHE = "tenjin-v1";
+const CACHE = "tenjin-v2";
 const SHELL = ["/", "/index.html"];
 
 self.addEventListener("install", (event) => {

@@ -169,6 +169,12 @@ export function getScores(mode: string): ScoreEntry[] {
   return loadDB().scores[mode] ?? [];
 }
 
+/** Every recorded session across all modes (for the Progress screen). */
+export function allScores(): ScoreEntry[] {
+  const db = loadDB();
+  return Object.values(db.scores).flat();
+}
+
 export function bestScore(mode: string): ScoreEntry | null {
   return getScores(mode)[0] ?? null;
 }

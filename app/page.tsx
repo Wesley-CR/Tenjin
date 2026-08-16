@@ -1,8 +1,6 @@
 "use client";
 
-import { KanaTable } from "@/components/KanaTable";
 import { PracticeSetup } from "@/components/PracticeSetup";
-import { useMastery } from "@/components/useMastery";
 import { useSettings } from "@/components/useSettings";
 import { SECTIONS } from "@/lib/decks";
 import { updateSettings } from "@/lib/settings";
@@ -14,7 +12,6 @@ const UPCOMING = [
 
 export default function Home() {
   const settings = useSettings();
-  const mastery = useMastery();
 
   // Remembered section, validated against what exists today.
   const deckId =
@@ -24,11 +21,11 @@ export default function Home() {
 
   return (
     <div className="home">
-      <section className="hero">
-        <h1 className="hero-title">
+      <section className="screen-header">
+        <h1 className="screen-title">
           Learn Japanese, <em>one character</em> at a time.
         </h1>
-        <p className="hero-sub">
+        <p className="screen-sub">
           No multiple choice, no guessing games. Read it, type it, pick it, or
           draw it — answer wrong and you try again. Pick a section to start.
         </p>
@@ -59,13 +56,6 @@ export default function Home() {
       </section>
 
       <PracticeSetup key={deckId} deckId={deckId} />
-
-      {deckId === "kana" && (
-        <section className="charts">
-          <KanaTable script="hiragana" mastery={mastery} />
-          <KanaTable script="katakana" mastery={mastery} />
-        </section>
-      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { statsVersion, subscribeStats } from "@/lib/stats";
+import { getStreak, statsVersion, subscribeStats } from "@/lib/stats";
 
 /**
  * Stable subscription + snapshot for the local stats store.
@@ -22,4 +22,13 @@ function subscribe(onChange: () => void): () => void {
 
 export function useStatsVersion(): number {
   return useSyncExternalStore(subscribe, statsVersion, () => 0);
+}
+
+/**
+ * Day-streak count, hydration-safe: the server (and the hydration render)
+ * always see 0, so the chip can't mismatch; the real value appears right
+ * after hydration and stays reactive to store writes.
+ */
+export function useStreak(): number {
+  return useSyncExternalStore(subscribe, () => getStreak().count, () => 0);
 }

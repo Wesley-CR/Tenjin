@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   allCardStats,
+  allScores,
   getScores,
   getStreak,
   masteryLevel,
@@ -83,6 +84,13 @@ describe("highscores", () => {
   it("caps the leaderboard at 10 entries", () => {
     for (let i = 0; i < 30; i++) recordSession({ mode: "m", correct: 1, trials: 1 });
     expect(getScores("m").length).toBeLessThanOrEqual(10);
+  });
+
+  it("flattens every mode into allScores", () => {
+    recordSession({ mode: "kana|toRomaji|type", correct: 5, trials: 6 });
+    recordSession({ mode: "kana|toRomaji|type", correct: 2, trials: 4 });
+    recordSession({ mode: "vocab|toRomaji|type", correct: 1, trials: 1 });
+    expect(allScores().length).toBe(3);
   });
 });
 
